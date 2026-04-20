@@ -54,6 +54,65 @@ function App() {
   }
 };
 
+ const handleLogout = async(e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch("http://localhost:8080/api/auth/logout", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: 'include'
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Logout failed");
+      }
+
+      setMessage({ type: "success", text: data.message || "Logged out successfully" });
+      setUser(null); 
+
+ } catch (error) {
+      setMessage({ type: "error", text: error.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleservice = async(e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch("http://localhost:8080/api/auth/get-me", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`
+        },
+        credentials: 'include'
+      });
+
+      const data = await res.json();
+      console.log("Service response:", data);
+      if (!res.ok) {
+        throw new Error(data.message || "Service request failed");
+      }
+
+      setMessage({ type: "success", text: data.message || "Service requested successfully" });
+
+    } catch (error) {
+      setMessage({ type: "error", text: error.message });
+    } finally {
+      setLoading(false);
+    }
+};
+
   const switchTab = (isLoginTab) => {
     setIsLogin(isLoginTab);
     setMessage(null);
@@ -67,20 +126,12 @@ function App() {
           <div className="dashboard-content">
             <h2 className="form-title" style={{ marginTop: '30px' }}>Welcome, {user.name}</h2>
             <div className="dashboard-actions">
-              <button className="submit-btn" onClick={() => alert('Service requested!')}>
+              <button className="submit-btn" onClick={handleservice}>
                 Get some service
-              </button>
-              <button className="submit-btn" onClick={() => alert('Token refreshed!')}>
-                Refresh token
               </button>
               <button 
                 className="submit-btn logout-btn" 
-                onClick={() => { 
-                  setUser(null); 
-                  setMessage(null); 
-                  setFormData({ username: '', email: '', password: '' });
-                  setIsLogin(true);
-                }}
+                onClick={handleLogout}
               >
                 Logout
               </button>

@@ -8,7 +8,12 @@ const app = express()
 
 app.use(express.json())
 app.use(morgan("dev"))
-app.use(cors())
+
+app.use(cors({
+  origin: "http://localhost:5173", // your React (Vite) URL
+  credentials: true
+}));
+
 app.use(cookie())
 
 app.use("/api/auth",authrouter)

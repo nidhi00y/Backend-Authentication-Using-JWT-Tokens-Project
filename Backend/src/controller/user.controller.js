@@ -3,6 +3,8 @@ import User from '../models/user.model.js';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import cookie from 'cookie-parser';
+import https from 'https';
+import axios from 'axios';
 
 async function register(req, res) {
     const {username, email, password} = req.body;
@@ -57,7 +59,7 @@ async function login(req, res) {
             return res.status(400).json({message: "Invalid email or password"});
         }
         const accessToken = jwt.sign({id:user._id}, process.env.JWT_SECRET, {expiresIn: '15m'});
-        const refreshToken = jwt.sign({id:user._id}, process.env.JWT_SECRET, {expiresIn: '15m'});
+        const refreshToken = jwt.sign({id:user._id}, process.env.JWT_SECRET, {expiresIn: '7d'});
         user.refreshtoken = refreshToken;
         await user.save();
         res.status(200).json({message: "Login successful",user, accessToken});
@@ -69,15 +71,40 @@ async function login(req, res) {
 
 async function getProfile(req, res) {
     const token = req.headers.authorization?.split(' ')[1];
-    if(!token) {
-        return res.status(401).json({message: "Token not found"})
+    if (!token) {
+        return res.status(401).json({ message: "Token not found" });
     }
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id);
-    if(!user || user.refreshtoken==null) {
-        return res.status(404).json({message: "User not found"});
+    console.log("Received token:", token);
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const user = await User.findById(decoded.id);
+
+        if (!user || user.refreshtoken == null) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        return res.status(200).json({ user });
+
+    } catch (err) {
+        if (err.name === 'TokenExpiredError') {
+            try {
+                const response = await axios.get(
+                    'http://localhost:8080/api/auth/refresh',
+                    { withCredentials: true }
+                );
+
+                return res.json({
+                    message: "Token refreshed",
+                    token: response.data.accessToken
+                });
+
+            } catch (refreshErr) {
+                return res.status(401).json({ message: "Refresh failed" });
+            }
+        }
+
+        return res.status(401).json({ message: "Invalid token " });
     }
-    res.status(200).json({user});
 }
 
 async function refresh(req, res) {
