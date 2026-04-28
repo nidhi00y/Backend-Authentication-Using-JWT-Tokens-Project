@@ -11,6 +11,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
   const [user, setUser] = useState(null);
+  const [accessToken, setAccessToken] = useState(null);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -32,6 +33,7 @@ function App() {
       headers: {
         "Content-Type": "application/json",
       },
+      credentials: 'include',
       body: JSON.stringify(formData),
     });
 
@@ -42,9 +44,10 @@ function App() {
     }
 
     setMessage({ type: "success", text: data.message || "Success!" });
-    
-    // Set user data to show dashboard
-    const userName = data?.user?.name || data?.username || formData.username || formData.email.split('@')[0];
+
+    // store access token (if present) and set user data to show dashboard
+    if (data?.accessToken) setAccessToken(data.accessToken);
+    const userName = data?.user?.username || data?.username || formData.username || (formData.email && formData.email.split('@')[0]);
     setUser({ name: userName });
 
   } catch (error) {
@@ -61,12 +64,12 @@ function App() {
 
     try {
       const res = await fetch("http://localhost:8080/api/auth/logout", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: 'include'
-      });
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: 'include'
+        });
 
       const data = await res.json();
       if (!res.ok) {
